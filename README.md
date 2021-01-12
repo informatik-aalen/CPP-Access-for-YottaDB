@@ -16,7 +16,7 @@ c_ydb_global _g("^g"), _counter("^counter");
 ```
 # Error Processing
 If a second parameter in the constructor is passed as 1 the object throws errors (see test2.cpp).
-If the second parameter is passed as 0 (or omitted) error-processing is done by the mezthod int rc(); which
+If the second parameter is passed as 0 (or omitted) error-processing is done by the method int rc(); which
 can be called after each access.
 # License
 
