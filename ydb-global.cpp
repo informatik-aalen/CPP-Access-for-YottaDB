@@ -24,6 +24,9 @@ c_ydb_global::c_ydb_global(string s, int t) {
 
 // error-getter
 int c_ydb_global::rc() {
+	/* REVIEW: if no call to YDB has happened, this will return uninitialized memory.
+	 * This should initialize `error = YDB_OK` in the `c_ydb_global` constructor.
+	 */
 	return error;
 }
 
@@ -34,6 +37,7 @@ ostream & operator << (ostream & o,  c_ydb_global & c) {
 }
 
 // Zuweisung aus String
+// REVIEW: I think this will make a copy of `s` unconditionally. Consider returning `string&` instead.
 string c_ydb_global::operator = ( const string & s) {
 	ydb_buffer_t value;
 	YDB_CPPSTR_TO_BUFFER(s, value);
@@ -51,8 +55,21 @@ int c_ydb_global::operator = ( const int & i) {
 }
 
 // Zuweisung aus c_ydb_global
+// REVIEW: This will make a copy of `this` unconditionally. Consider returning `c_ydb_global&` instead.
 c_ydb_global c_ydb_global::operator = (c_ydb_global & re) {
 	*this = (string) re;
+	/* REVIEW: clang gives the following error on this line:
+	 *
+	 * In file included from ydb-global.cpp:12:
+	 * ./ydb-global.h:64:15: warning: definition of implicit copy constructor for 'c_ydb_global' is deprecated because it has a user-declared copy assignment operator [-Wdeprecated-copy]
+	 * 	c_ydb_global operator = (c_ydb_global &);
+	 * 		^
+	 * ydb-global.cpp:61:9: note: in implicit copy constructor for 'c_ydb_global' first required here
+	 * 	return *this;
+	 * 	^
+	 *
+	 * I am not sure what it means, but it would be nice to fix the warning.
+	 */
 	return *this;
 }
 
@@ -61,6 +78,9 @@ c_ydb_global::operator string() {
 	error = ydb_get_s(&b_name, make_index_array(), b_index, &global_val);
 	if (use_throw && error)
 		throw error;
+	// REVIEW: This looks incorrect. If an error occurs, buf_addr may not be set to a valid address.
+	// I think to fix this you would need to use exceptions unconditionally, because there's no
+	// way to return an error from `operator string()`.
 	return string(global_val.buf_addr, global_val.len_used);
 }
 
@@ -83,6 +103,9 @@ string c_ydb_global::next() {
 		result = string(global_val.buf_addr, global_val.len_used);
 	if (use_throw && error)
 		throw error;
+	// REVIEW: if an error occurs, there is no way for the user to tell that apart from a node
+	// with data set to the empty string. I think to fix this you would need to use exceptions
+	// unconditionally.
 	return result;
 }
 
@@ -93,6 +116,9 @@ string c_ydb_global::previous() {
 		result = string(global_val.buf_addr, global_val.len_used);
 	if (use_throw && error)
 		throw error;
+	// REVIEW: if an error occurs, there is no way for the user to tell that apart from a node
+	// with data set to the empty string. I think to fix this you would need to use exceptions
+	// unconditionally.
 	return result;
 }
 
@@ -102,6 +128,7 @@ void c_ydb_global::kill(int p) {
 	if (error && use_throw)
 		throw error;
 	height = 0;
+	// REVIEW: if an error occurs, there is no way for the user to tell.
 }
 
 // $data
@@ -110,6 +137,7 @@ unsigned int  c_ydb_global::data() {
 	error = ydb_data_s(&b_name, make_index_array(), b_index, & rc);
 	if (error && use_throw)
 		throw error;
+	// REVIEW: if an error occurs, there is no way for the user to tell.
 	return rc;
 }
 
@@ -121,6 +149,9 @@ int  c_ydb_global::operator+=(int by) {
 	error = ydb_incr_s(&b_name, make_index_array(), b_index, & value, & global_val);
 	if (error && use_throw)
 		throw error;
+	// REVIEW: This looks incorrect. If an error occurs, buf_addr may not be set to a valid address.
+	// I think to fix this you would need to use exceptions unconditionally, because there's no
+	// way to return an error from `operator string()`.
 	return stoi( string(global_val.buf_addr, global_val.len_used));
 }
 
