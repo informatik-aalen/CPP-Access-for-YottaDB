@@ -1,3 +1,4 @@
+// REVIEW: this does not have a header guard, so it will cause errors if included more than once. Consider adding an `#ifdef` guard.
 // Version 20210112
 #include <iostream>
 #include <string>
