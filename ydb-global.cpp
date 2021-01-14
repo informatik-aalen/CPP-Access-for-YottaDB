@@ -103,6 +103,9 @@ string c_ydb_global::next() {
 		result = string(global_val.buf_addr, global_val.len_used);
 	if (use_throw && error)
 		throw error;
+	// REVIEW: if an error occurs, there is no way for the user to tell that apart from a node
+	// with data set to the empty string. I think to fix this you would need to use exceptions
+	// unconditionally.
 	return result;
 }
 
@@ -113,6 +116,9 @@ string c_ydb_global::previous() {
 		result = string(global_val.buf_addr, global_val.len_used);
 	if (use_throw && error)
 		throw error;
+	// REVIEW: if an error occurs, there is no way for the user to tell that apart from a node
+	// with data set to the empty string. I think to fix this you would need to use exceptions
+	// unconditionally.
 	return result;
 }
 
@@ -122,6 +128,7 @@ void c_ydb_global::kill(int p) {
 	if (error && use_throw)
 		throw error;
 	height = 0;
+	// REVIEW: if an error occurs, there is no way for the user to tell.
 }
 
 // $data
@@ -130,6 +137,7 @@ unsigned int  c_ydb_global::data() {
 	error = ydb_data_s(&b_name, make_index_array(), b_index, & rc);
 	if (error && use_throw)
 		throw error;
+	// REVIEW: if an error occurs, there is no way for the user to tell.
 	return rc;
 }
 
@@ -141,6 +149,9 @@ int  c_ydb_global::operator+=(int by) {
 	error = ydb_incr_s(&b_name, make_index_array(), b_index, & value, & global_val);
 	if (error && use_throw)
 		throw error;
+	// REVIEW: This looks incorrect. If an error occurs, buf_addr may not be set to a valid address.
+	// I think to fix this you would need to use exceptions unconditionally, because there's no
+	// way to return an error from `operator string()`.
 	return stoi( string(global_val.buf_addr, global_val.len_used));
 }
 
