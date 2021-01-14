@@ -9,7 +9,6 @@
 #include "ydb-global.h"
 using namespace std;
 
-
 int main() {
 	// second parameter leads to error-throws
 	c_ydb_global _g("^g", 1), _counter("^counter");
