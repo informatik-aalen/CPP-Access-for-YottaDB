@@ -58,6 +58,18 @@ int c_ydb_global::operator = ( const int & i) {
 // REVIEW: This will make a copy of `this` unconditionally. Consider returning `c_ydb_global&` instead.
 c_ydb_global c_ydb_global::operator = (c_ydb_global & re) {
 	*this = (string) re;
+	/* REVIEW: clang gives the following error on this line:
+	 *
+	 * In file included from ydb-global.cpp:12:
+	 * ./ydb-global.h:64:15: warning: definition of implicit copy constructor for 'c_ydb_global' is deprecated because it has a user-declared copy assignment operator [-Wdeprecated-copy]
+	 * 	c_ydb_global operator = (c_ydb_global &);
+	 * 		^
+	 * ydb-global.cpp:61:9: note: in implicit copy constructor for 'c_ydb_global' first required here
+	 * 	return *this;
+	 * 	^
+	 *
+	 * I am not sure what it means, but it would be nice to fix the warning.
+	 */
 	return *this;
 }
 
