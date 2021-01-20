@@ -9,18 +9,27 @@
 #include "ydb-global.h"
 using namespace std;
 
+extern int ydb_global_throw_error;
 
 int main() {
-	// second parameter leads to error-throws
-	c_ydb_global _g("^g", 1), _counter("^counter");
-	cout << ++_counter << endl;
-	for (int i = 0; i < 10; i++) {
+	string ind;
+	c_ydb_global _g("^g");
+	
+	_g.kill();
+	for (int i = 1; i <=20; i+= 3)
+		_g[i] = i*i;
+	ind = "", ydb_global_throw_error = 0;
+	while (ind = (string) _g[ind].nextSibling(), ind != "")
+		cout << ind << " " << (string) _g[ind] << endl;
+	ydb_global_throw_error = 1;
+
+for (int i = 0; i <= 20; i++) {
 		cout << i << ": ";
 		try {
 			cout << _g[i];
 		}
 		catch (int errorcode) {
-			cout << "not set";
+			cout << "error " << errorcode;
 		}
 		cout << endl;
 	}

@@ -1,5 +1,3 @@
-
-
 #include <iostream>
 #include <string>
 #include "ydb-global.h"
@@ -7,14 +5,14 @@ using namespace std;
 
 
 int main() {
-	int n;
-	c_ydb_global _log("^log");
-	_log[++_log] = "hello";
-	_log[++_log] = "world";
-	_log[++_log] = "foo";
-	_log[++_log] = "bar";
-
-	n = stoi(_log);
-	for (int i = 1; i <= n; i++)
-		cout << i << ": " << _log[i] << endl;
+	c_ydb_global _log("^log"), _g("^g");
+	_log[++_log] = "Hallo";
+	cout << _log << endl;
+	indexList l, l2 {"2","3"};
+	cout <<  _g(l2) << endl;;
+	while (l = _g(l).query(), l.size()) {
+		for (unsigned int i = 0; i < l.size(); i++)
+		cout << " " << l[i];
+		cout << ":" << _g(l)<< endl;
+	}
 }
