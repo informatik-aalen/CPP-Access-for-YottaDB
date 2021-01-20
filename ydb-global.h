@@ -21,10 +21,6 @@ typedef vector<string> indexList;
 class c_ydb_global;
 class c_ydb_entry;
 
-class c_special_string {
-	unsigend int l;
-	
-}
 class c_ydb_entry { // proxy class for []-operator
 public:
 	friend ostream & operator << (ostream &, c_ydb_entry);
