@@ -15,9 +15,13 @@ Mapping an object to the global name is done via the constructor.
 c_ydb_global _g("^g"), _counter("^counter");
 ```
 # Error Processing
-If a second parameter in the constructor is passed as 1 the object throws errors (see test2.cpp).
-If the second parameter is passed as 0 (or omitted) error-processing is done by the method int rc(); which
-can be called after each access.
+- set the external declared variable ydb_global_throw_error to a value not zero so the dangerous methods will throw errors.
+- Otherwise error-processing is done by the method
+```
+int last_error();
+```
+which can be called after each method-call.
+
 # License
 
 This project is licensed under the terms of the MIT license.
