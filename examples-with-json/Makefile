@@ -2,11 +2,9 @@
 
 cpp=g++
 ydb=$(shell pkg-config --variable=prefix yottadb)
-coptions=-I$(ydb) -I../src/ -Wall 
-loptions=-L$(ydb) -lyottadb
-baseexecutables=test1 test2 test3 test4 test5-query \
-        cpp-api-wordfreq \
-        object-db-blob object-db-globalmapping lock
+coptions=-I$(ydb) -I../src/ -Wall -DWITH_JSON=1 
+loptions=-L$(ydb) -lyottadb -ljsoncpp
+baseexecutables=json_import json_export json-import-string
 
 executables=$(patsubst %,bin/%,$(baseexecutables))
 

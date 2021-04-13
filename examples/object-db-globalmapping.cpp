@@ -18,15 +18,18 @@ public:
 // Following two operators must be implemented one time class-specific
 // customer 2 YottaDB
 void operator << (const c_ydb_entry & e, c_customer c) {
-	c_ydb_entry e1(e),e2(e), e3(e); // little bit tricky because no member of class c_ydb_global...
-	e1["ln"] = c.ln, e2["fn"] = c.fn, e3["bd"] = c.birthday;
+	c_ydb_global g(e.getName());
+	indexList l(e);
+	g(l)["ln"] = c.ln, g(l)["fn"] = c.fn, g(l)["bd"] = c.birthday;
  }
 
 // YottaDB 2 customer
 void operator << (c_customer & c, c_ydb_entry e) {
-	c.ln = (string) c_ydb_entry(e)["ln"];
-	c.fn = (string) c_ydb_entry(e)["fn"];
-	c.birthday = + c_ydb_entry(e)["bd"];
+	c_ydb_global g(e.getName());
+	indexList l(e);
+	c.ln = (string) g(l)["ln"];
+	c.fn = (string) g(l)["fn"];
+	c.birthday = + g(l)["bd"];
 }
 
 int main() {

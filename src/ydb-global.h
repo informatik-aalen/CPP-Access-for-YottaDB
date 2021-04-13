@@ -1,5 +1,5 @@
 /*
- Version 2021017
+ Version 20210413
  Winfried Bantel, Aalen University
  */
 #pragma once
@@ -33,7 +33,9 @@ public:
 	c_ydb_entry & operator[](string);
 	c_ydb_entry & operator[](c_ydb_entry);
 	c_ydb_entry & operator [] (int);
+	c_ydb_entry & operator [] (double);
 	operator string();
+	operator indexList () const;
 	//operator int ();
 	string operator=(string);
 	double operator + ();
@@ -44,6 +46,7 @@ public:
 	int operator++();
 	int operator--(int);
 	int operator--();
+	double operator=(double);
 
 	void kill(bool = true);
 	int lock_inc(unsigned long long = 0);
@@ -53,6 +56,7 @@ public:
 	string previousSibling();
 	bool isSet();
 	bool hasChilds();
+	string getName() const ;
 
 protected:
 	c_ydb_global * glo;
@@ -65,12 +69,14 @@ protected:
 
 class c_ydb_global {
 public:
-	c_ydb_global(string);
+	c_ydb_global(const string & s);
+	c_ydb_global(const c_ydb_global &);
 	friend ostream & operator << (ostream & o, c_ydb_global & c);
 	friend int ydb_lock(vector<c_ydb_entry> &, unsigned long long);
 	c_ydb_entry operator [] (string);
 	c_ydb_entry operator [] (const char *);
 	c_ydb_entry operator [] (int);
+	c_ydb_entry operator [] (double);
 	c_ydb_entry operator [] (c_ydb_entry);
 	c_ydb_entry operator () (indexList &);
 	operator string ();
@@ -87,15 +93,19 @@ public:
 	int operator++();
 	int operator--(int);
 	int operator--();
+	double operator=(double);
 	void kill(bool = true);
 	int  lock_inc(unsigned long long = 0);
 	int lock_dec();
 	bool isSet();
 	bool hasChilds();
+	string getName() const;
+	void setName(const string & s);
 protected:
 	string name;
 	ydb_buffer_t b_name;
 	int error;
+	string double_to_string(double);
 };
 
 int ydb_lock(vector<c_ydb_entry> & , unsigned long long = 0);
@@ -109,3 +119,22 @@ int ydb_lock(vector<c_ydb_entry> & , unsigned long long = 0);
 /*  8 */ int ydb_lock(const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, unsigned long long = 0);
 /*  9 */ int ydb_lock(const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, unsigned long long = 0);
 /* 10 */ int ydb_lock(const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, const c_ydb_entry &, unsigned long long = 0);
+
+
+
+/*
+ 
+ JSON
+ 
+ */
+#if WITH_JSON > 0
+#include <jsoncpp/json/json.h>
+#include "ydb-global.h"
+// void jsoncpp_2_ydb(const c_ydb_entry & glo, const Json::Value & val);
+// Json::Value ydb_2_jsoncpp(const c_ydb_entry & glo);
+// int isNumeric(string str);
+void operator << (const c_ydb_entry & glo, const Json::Value & val);
+void operator << (Json::Value & val,const c_ydb_entry & glo);
+void operator >> (Json::Value & val, const c_ydb_entry & glo);
+//void operator >> (const c_ydb_entry & glo, Json::Value & val);
+#endif

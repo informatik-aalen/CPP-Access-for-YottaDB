@@ -1,5 +1,5 @@
 /*
- Version 20210127
+ Version 20210413
  Winfried Bantel, Aalen University
  ToDo:
  make_index_array: YDB_MAX_SUBS abfangen dt. in []
@@ -7,9 +7,11 @@
 */
 
 #include <iostream>
+#include <sstream>      // std::stringstream
 #include <string>
 #include <string.h>
 #include <vector>
+#include <math.h>
 #include "ydb-global.h"
 using namespace std;
 
@@ -50,8 +52,20 @@ static ydb_buffer_t global_ret[YDB_MAX_SUBS] ={ // Must be YDB_MAX_SUBS entries!
 };
 
 // Konstruktor
-c_ydb_global::c_ydb_global(string s) {
+c_ydb_global::c_ydb_global(const string & s) {
+	setName(s);
+	error = 0;
+}
+
+
+void c_ydb_global::setName(const string & s) {
 	name = s;
+	YDB_CPPSTR_TO_BUFFER(name, b_name);
+}
+
+c_ydb_global::c_ydb_global(const c_ydb_global & g) {
+	cout << "copy-constr..." << endl;
+	name = g.name;
 	YDB_CPPSTR_TO_BUFFER(name, b_name);
 	error = 0;
 }
@@ -160,6 +174,11 @@ int  c_ydb_global::operator = (int i) {
 	return i;
 }
 
+double  c_ydb_global::operator = (double i) {
+	c_ydb_entry(this) = i;
+	return i;
+}
+
 //Now protected methods
 
 
@@ -199,6 +218,10 @@ c_ydb_entry & c_ydb_entry::operator [](int _i) {
 	return *this;
 }
 
+c_ydb_entry  & c_ydb_entry::operator [] (double x) {
+	s_index[height++] = glo->double_to_string(x);
+	return *this;
+}
 c_ydb_entry::operator string (){
 	make_index_array();
 	glo->error = ydb_get_s(&(glo->b_name), height, b_index, global_ret);
@@ -213,12 +236,21 @@ c_ydb_entry::operator int (){
 	return a;
 }*/
 
+c_ydb_entry::operator indexList () const {
+	return indexList(s_index, s_index + height);
+}
+
 double c_ydb_entry::operator + (){
 	return 	stod(string(*this));
 }
 
 int c_ydb_entry::operator = (int i){
 	*this = to_string(i);
+	return i;
+}
+
+double c_ydb_entry::operator = (double i){
+	*this = glo->double_to_string(i);
 	return i;
 }
 
@@ -277,6 +309,11 @@ c_ydb_entry  c_ydb_global::operator [] (int i) {
 	return c_ydb_entry(this, to_string(i));
 }
 
+c_ydb_entry  c_ydb_global::operator [] (double x) {
+	return c_ydb_entry(this, double_to_string(x));
+}
+
+
 void c_ydb_global::kill(bool p) {
 	c_ydb_entry(this).kill();
 }
@@ -326,6 +363,14 @@ int c_ydb_global::lock_inc(unsigned long long t) {
 int c_ydb_global::lock_dec() {
 	return c_ydb_entry(this).lock_dec();
 }
+
+string c_ydb_global::getName() const {
+	return name;
+}
+string c_ydb_entry::getName() const {
+	return glo->name;
+}
+
 
 indexList c_ydb_entry::query() {
 	indexList rc;
@@ -471,3 +516,146 @@ int ydb_lock(const c_ydb_entry & e0, const c_ydb_entry & e1, const c_ydb_entry &
 	return ydb_lock(v, t);
 }
 
+string c_ydb_global::double_to_string(double x) {
+	stringstream s;
+	string dummy;
+	s << x;
+	s >> dummy;
+//	cout << dummy << endl;
+	if (dummy[0] == '0')
+		dummy.erase(0,1);
+	else if (dummy[0] == '-' && dummy[1] == '0')
+		dummy.erase(1,1);
+	return dummy;
+}
+
+
+
+/*
+ 
+ JSON
+ 
+ 
+ */
+#if WITH_JSON > 0
+
+static void jsoncpp_2_ydb(const c_ydb_entry & glo, const Json::Value & val);
+static Json::Value ydb_2_jsoncpp(const c_ydb_entry & glo);
+
+
+void operator << (Json::Value & val,const  c_ydb_entry & glo) {
+	val = ydb_2_jsoncpp(glo);
+}
+void operator >> (Json::Value & val, const c_ydb_entry & glo){
+	jsoncpp_2_ydb(glo,val);
+}
+
+
+void operator << (const c_ydb_entry & glo, const Json::Value & val) {
+	jsoncpp_2_ydb(glo,val);
+}
+
+/*
+ Now JSON helper functions
+ */
+
+
+
+
+static void jsoncpp_2_ydb(const c_ydb_entry & glo, const Json::Value & val) {
+	static int level = -1;
+	static c_ydb_global g("dummy");
+	static indexList l;
+	
+	if (!++level) {
+		g.setName(glo.getName());
+		l = indexList(glo);
+		g(l).kill();
+	}
+	switch (val.type()) {
+		case Json::nullValue: g(l) = "null"; break;
+		case Json::booleanValue: g(l) =  (val.asBool() ? "true" : "false") ; break;
+		case Json::intValue:
+		case Json::uintValue: g(l) = val.asString(); break;
+		case Json::realValue: g(l) = val.asDouble(); break;
+		case Json::stringValue: g(l) = val.asString(); break;
+		case Json::arrayValue:
+			l.push_back("");
+			for (Json::ArrayIndex i=0; i<val.size(); i++) {
+				l[l.size() - 1] = to_string(i);
+				jsoncpp_2_ydb(glo, val[i]);
+			}
+			l.pop_back();
+			break;
+		case Json::objectValue:
+			l.push_back("");
+			for (Json::Value::const_iterator i = val.begin(); i != val.end(); i++) {
+				l[l.size() - 1] = i.key().asString();
+				jsoncpp_2_ydb(glo, val[i.key().asString()]);
+			}
+			l.pop_back();
+			break;
+		default : // ToDo: Throw.... oder lasterror...
+			cerr << "Wrong type!" << endl;
+			exit(0);
+	}
+	level--;
+}
+
+
+int isNumeric(string str) {
+	// return-value:
+	// No number: 0, int: 1, fixcomma: 2
+	int z = 0, pos = (str[0] == '-') ? 1 : 0, c;
+	const static int delta[][4] = {/* 0 1 2 3  Token*/
+		/*Zustand 0*/   {4,1,3,4},
+		/*Zustand 1*/   {5,1,2,4},
+		/*Zustand 2*/   {4,3,4,4},
+		/*Zustand 3*/   {6,3,4,4}};
+	
+	while (z <4) {
+		c = str[pos++];
+		c = (c >= '0' && c <= '9') ? 1 : (((c == '\0') ? 0 : ((c == '.') ? 2 : 3)));
+		z = delta[z][c];
+	}
+	return (z - 4);
+}
+
+static Json::Value ydb_2_jsoncpp(const c_ydb_entry & glo) {
+	static c_ydb_global g("dummy");
+	static indexList l;
+	static int level = -1;
+	Json::Value res;
+	if (!++level) {
+		g.setName(glo.getName());
+		l = indexList(glo);
+	}
+	if (g(l).isSet()) { // Skalar
+		string s = g(l);
+		switch(isNumeric(s)) {
+			case 0: res = s; break;
+			case 1: res = stoi(s); break;
+			case 2: res = stod(s); break;
+		}
+	}
+	else if (g(l).hasChilds()) {
+		l.push_back("");
+		if (g(l).nextSibling() == "0") {
+			int i = 0;
+			while (l[l.size() - 1] = g(l).nextSibling(), l[l.size() - 1] != "")
+				res[i++] = ydb_2_jsoncpp(glo);
+		}
+		else
+			while (l[l.size() - 1] = g(l).nextSibling(), l[l.size() - 1] != "")
+				if (l.size() >= 1)
+					res[l[l.size() - 1]] = ydb_2_jsoncpp(glo);
+				else
+					res = ydb_2_jsoncpp(glo);
+		l.pop_back();
+	}
+	else
+		cout << "error " << endl;
+	--level;
+	return res;
+}
+#endif
